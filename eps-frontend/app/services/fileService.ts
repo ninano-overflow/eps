@@ -1,15 +1,53 @@
 import { type FileItem } from "../types";
 
 export class FileService {
-  private baseUrl = "http://192.168.199.11:3001";
-  // typeof window !== "undefined" && window.location.port === "3000"
-  //   ? "http://localhost:3001" // Use simple CORS proxy in development
-  //   : "http://192.168.199.11:8554";
+  private baseUrl = this.getBaseUrl();
+
+  private getBaseUrl(): string {
+    if (typeof window === "undefined") {
+      // Server-side rendering
+      return "http://192.168.199.11:8554";
+    }
+
+    const currentHost = window.location.hostname;
+    const currentPort = window.location.port;
+    const currentProtocol = window.location.protocol;
+    
+    console.log("Current location:", { currentHost, currentPort, currentProtocol });
+    
+    // If running on localhost (development)
+    if (currentHost === "localhost" || currentHost === "127.0.0.1") {
+      return currentPort === "3000" ? "http://localhost:3001" : "http://192.168.199.11:3001";
+    }
+    
+    // If running on the same network IP (production on same server)
+    if (currentHost.startsWith("192.168.199.11")) {
+      // Check if we're on a specific port that suggests we need the backend on 8554
+      if (currentPort && currentPort !== "8554") {
+        // We're on a different port, likely the frontend, need to specify backend port
+        return `${currentProtocol}//${currentHost}:8554`;
+      }
+      // Same host and port, use relative URLs (no CORS needed)
+      return "";
+    }
+    
+    // Fallback to CORS proxy or direct connection
+    return "http://192.168.199.11:3001";
+  }
 
   async getFiles(path: string = "/download"): Promise<FileItem[]> {
     try {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-      const url = `${this.baseUrl}${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
+      let url: string;
+      
+      if (this.baseUrl) {
+        url = `${this.baseUrl}${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
+      } else {
+        // Use relative URL for same-origin requests
+        url = `${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
+      }
+
+      console.log("Fetching from URL:", url);
 
       const response = await fetch(url, {
         headers: {
@@ -133,7 +171,13 @@ export class FileService {
 
   getDownloadUrl(currentPath: string, fileName: string): string {
     const basePath = currentPath.endsWith("/") ? currentPath : `${currentPath}/`;
-    return `${this.baseUrl}${basePath}${fileName}`;
+    
+    if (this.baseUrl) {
+      return `${this.baseUrl}${basePath}${fileName}`;
+    } else {
+      // Use relative URL for same-origin requests
+      return `${basePath}${fileName}`;
+    }
   }
 
   async downloadFile(currentPath: string, fileName: string): Promise<void> {
