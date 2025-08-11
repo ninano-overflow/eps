@@ -17,22 +17,17 @@ export class FileService {
     
     // If running on localhost (development)
     if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-      return currentPort === "3000" ? "http://localhost:3001" : "http://192.168.199.11:3001";
+      return currentPort === "3000" ? "http://localhost:3001" : "http://192.168.199.11:8554";
     }
     
-    // If running on the same network IP (production on same server)
+    // If running on the same network IP (edge device or production)
     if (currentHost.startsWith("192.168.199.11")) {
-      // Check if we're on a specific port that suggests we need the backend on 8554
-      if (currentPort && currentPort !== "8554") {
-        // We're on a different port, likely the frontend, need to specify backend port
-        return `${currentProtocol}//${currentHost}:8554`;
-      }
-      // Same host and port, use relative URLs (no CORS needed)
-      return "";
+      // Always connect directly to port 8554 for the backend file server
+      return `${currentProtocol}//${currentHost}:8554`;
     }
     
-    // Fallback to CORS proxy or direct connection
-    return "http://192.168.199.11:3001";
+    // Fallback for other scenarios
+    return "http://192.168.199.11:8554";
   }
 
   async getFiles(path: string = "/download"): Promise<FileItem[]> {
