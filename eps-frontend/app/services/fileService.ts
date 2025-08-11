@@ -10,7 +10,6 @@ export class FileService {
     try {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`;
       const url = `${this.baseUrl}${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
-      console.log("Fetching URL:", url);
 
       const response = await fetch(url, {
         headers: {
@@ -23,7 +22,6 @@ export class FileService {
       }
 
       const html = await response.text();
-
       return this.parseDirectoryHTML(html);
     } catch (error) {
       console.error("Error fetching files:", error);
@@ -32,54 +30,70 @@ export class FileService {
   }
 
   private parseDirectoryHTML(html: string): FileItem[] {
+    console.log("Parsing HTML response:", html.substring(0, 500));
+    
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
-    const preElement = doc.querySelector("pre");
-
-    if (!preElement) return [];
-
-    const lines = preElement.textContent?.split("\n") || [];
+    
+    // Find all <a> tags directly
+    const links = doc.querySelectorAll("a");
     const files: FileItem[] = [];
+    
+    console.log("Found links:", links.length);
 
-    for (const line of lines) {
-      // Match lines with href links
-      const linkMatch = line.match(/<a href="([^"]+)">([^<]+)<\/a>/);
-      if (!linkMatch) continue;
-
-      const [, href, linkText] = linkMatch;
-
-      // Skip parent directory and invalid links
-      if (href === "../" || href === ".." || !href || linkText === "..") continue;
-
-      // Extract file info after the link
-      const afterLink = line.substring(line.indexOf("</a>") + 4);
-      const parts = afterLink
-        .trim()
-        .split(/\s+/)
-        .filter((p) => p);
-
-      let dateText = "";
-      let sizeText = "";
-
-      if (parts.length >= 2) {
-        dateText = `${parts[0]} ${parts[1]}`;
-        sizeText = parts[2] || "";
+    links.forEach((link, index) => {
+      const href = link.getAttribute("href");
+      const linkText = link.textContent?.trim();
+      
+      console.log(`Link ${index}: href="${href}", text="${linkText}"`);
+      
+      // Skip parent directory, empty links, and invalid ones
+      if (!href || !linkText || href === "../" || linkText === ".." || href === "/" || linkText === "") {
+        return;
+      }
+      
+      // Skip if it looks like a relative path back
+      if (href.startsWith("..")) {
+        return;
       }
 
       const isDirectory = href.endsWith("/");
       const fileName = isDirectory ? linkText.replace("/", "") : linkText;
       const extension = !isDirectory ? fileName.split(".").pop()?.toLowerCase() : undefined;
+      
+      // Try to get file info from the text content around the link
+      const parentElement = link.parentElement;
+      let dateText = "";
+      let sizeText = "";
+      
+      if (parentElement) {
+        const fullText = parentElement.textContent || "";
+        const afterLinkIndex = fullText.indexOf(linkText) + linkText.length;
+        const afterLinkText = fullText.substring(afterLinkIndex);
+        
+        // Extract date and size info (typical format: "01-Jan-1980 00:00     32K")
+        const match = afterLinkText.match(/(\d{2}-\w{3}-\d{4}\s+\d{2}:\d{2})\s+(\d+\w?)/);
+        if (match) {
+          dateText = match[1];
+          sizeText = match[2];
+        }
+      }
 
-      files.push({
+      const fileItem: FileItem = {
         name: fileName,
         type: isDirectory ? "directory" : "file",
         size: this.parseFileSize(sizeText),
-        modified: dateText || "",
+        modified: dateText,
         path: href,
         extension,
-      });
-    }
+      };
+      
+      console.log("Parsed file:", fileItem);
+      files.push(fileItem);
+    });
 
+    console.log("Total parsed files:", files.length);
+    
     return files.sort((a, b) => {
       // Directories first
       if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
@@ -120,6 +134,44 @@ export class FileService {
   getDownloadUrl(currentPath: string, fileName: string): string {
     const basePath = currentPath.endsWith("/") ? currentPath : `${currentPath}/`;
     return `${this.baseUrl}${basePath}${fileName}`;
+  }
+
+  async downloadFile(currentPath: string, fileName: string): Promise<void> {
+    try {
+      const url = this.getDownloadUrl(currentPath, fileName);
+      console.log("Downloading file from:", url);
+
+      // Fetch the file as a blob
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      
+      // Create a temporary URL for the blob
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // Create a temporary anchor element for download
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      link.style.display = "none";
+      
+      // Add to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
+      
+      console.log("File download initiated:", fileName);
+    } catch (error) {
+      console.error("Download error:", error);
+      throw new Error(`Failed to download ${fileName}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   }
 
   getFileIcon(file: FileItem): string {

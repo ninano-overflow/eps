@@ -12,6 +12,7 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [downloadingFiles, setDownloadingFiles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadFiles(currentPath);
@@ -39,9 +40,24 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
     }
   };
 
-  const handleDownload = (file: FileItem) => {
-    const downloadUrl = fileService.getDownloadUrl(currentPath, file.name);
-    window.open(downloadUrl, "_blank");
+  const handleDownload = async (file: FileItem) => {
+    const fileKey = `${currentPath}/${file.name}`;
+    
+    try {
+      setDownloadingFiles(prev => new Set(prev).add(fileKey));
+      await fileService.downloadFile(currentPath, file.name);
+    } catch (error) {
+      console.error("Download failed:", error);
+      // Fallback to opening in new tab if download fails
+      const downloadUrl = fileService.getDownloadUrl(currentPath, file.name);
+      window.open(downloadUrl, "_blank");
+    } finally {
+      setDownloadingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileKey);
+        return newSet;
+      });
+    }
   };
 
   const navigateUp = () => {
@@ -148,9 +164,10 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
                       e.stopPropagation();
                       handleDownload(file);
                     }}
-                    className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    disabled={downloadingFiles.has(`${currentPath}/${file.name}`)}
+                    className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:bg-gray-400"
                   >
-                    Download
+                    {downloadingFiles.has(`${currentPath}/${file.name}`) ? "Downloading..." : "Download"}
                   </button>
                 )}
               </div>
@@ -175,8 +192,12 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
               </video>
               <div className="mt-4 flex justify-between items-center">
                 <div className="text-sm text-gray-600">Size: {fileService.formatFileSize(selectedFile.size)}</div>
-                <button onClick={() => handleDownload(selectedFile)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-                  Download
+                <button 
+                  onClick={() => handleDownload(selectedFile)} 
+                  disabled={downloadingFiles.has(`${currentPath}/${selectedFile.name}`)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:bg-gray-400"
+                >
+                  {downloadingFiles.has(`${currentPath}/${selectedFile.name}`) ? "Downloading..." : "Download"}
                 </button>
               </div>
             </div>
