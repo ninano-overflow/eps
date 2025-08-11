@@ -1,10 +1,10 @@
 import { type FileItem } from "../types";
 
 export class FileService {
-  private baseUrl =
-    typeof window !== "undefined" && window.location.port === "3000"
-      ? "http://localhost:3001" // Use simple CORS proxy in development
-      : "http://192.168.199.11:8554";
+  private baseUrl = "http://192.168.199.11:8554";
+  // typeof window !== "undefined" && window.location.port === "3000"
+  //   ? "http://localhost:3001" // Use simple CORS proxy in development
+  //   : "http://192.168.199.11:8554";
 
   async getFiles(path: string = "/download"): Promise<FileItem[]> {
     try {
@@ -31,27 +31,27 @@ export class FileService {
 
   private parseDirectoryHTML(html: string): FileItem[] {
     console.log("Parsing HTML response:", html.substring(0, 500));
-    
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
-    
+
     // Find all <a> tags directly
     const links = doc.querySelectorAll("a");
     const files: FileItem[] = [];
-    
+
     console.log("Found links:", links.length);
 
     links.forEach((link, index) => {
       const href = link.getAttribute("href");
       const linkText = link.textContent?.trim();
-      
+
       console.log(`Link ${index}: href="${href}", text="${linkText}"`);
-      
+
       // Skip parent directory, empty links, and invalid ones
       if (!href || !linkText || href === "../" || linkText === ".." || href === "/" || linkText === "") {
         return;
       }
-      
+
       // Skip if it looks like a relative path back
       if (href.startsWith("..")) {
         return;
@@ -60,17 +60,17 @@ export class FileService {
       const isDirectory = href.endsWith("/");
       const fileName = isDirectory ? linkText.replace("/", "") : linkText;
       const extension = !isDirectory ? fileName.split(".").pop()?.toLowerCase() : undefined;
-      
+
       // Try to get file info from the text content around the link
       const parentElement = link.parentElement;
       let dateText = "";
       let sizeText = "";
-      
+
       if (parentElement) {
         const fullText = parentElement.textContent || "";
         const afterLinkIndex = fullText.indexOf(linkText) + linkText.length;
         const afterLinkText = fullText.substring(afterLinkIndex);
-        
+
         // Extract date and size info (typical format: "01-Jan-1980 00:00     32K")
         const match = afterLinkText.match(/(\d{2}-\w{3}-\d{4}\s+\d{2}:\d{2})\s+(\d+\w?)/);
         if (match) {
@@ -87,13 +87,13 @@ export class FileService {
         path: href,
         extension,
       };
-      
+
       console.log("Parsed file:", fileItem);
       files.push(fileItem);
     });
 
     console.log("Total parsed files:", files.length);
-    
+
     return files.sort((a, b) => {
       // Directories first
       if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
@@ -143,30 +143,30 @@ export class FileService {
 
       // Fetch the file as a blob
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
       }
 
       const blob = await response.blob();
-      
+
       // Create a temporary URL for the blob
       const blobUrl = window.URL.createObjectURL(blob);
-      
+
       // Create a temporary anchor element for download
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = fileName;
       link.style.display = "none";
-      
+
       // Add to DOM, click, and remove
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the blob URL
       window.URL.revokeObjectURL(blobUrl);
-      
+
       console.log("File download initiated:", fileName);
     } catch (error) {
       console.error("Download error:", error);
