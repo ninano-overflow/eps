@@ -1,14 +1,15 @@
 import { type FileItem } from "../types";
 
 export class FileService {
-  private baseUrl = typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:3001" // Use CORS proxy in development
-    : "http://192.168.199.11:8554";
+  private baseUrl =
+    typeof window !== "undefined" && window.location.port === "3000"
+      ? "" // Use Vite proxy in development
+      : "http://192.168.199.11:8554";
 
   async getFiles(path: string = "/download"): Promise<FileItem[]> {
     try {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-      const url = `${this.baseUrl}${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
+      const url = this.baseUrl ? `${this.baseUrl}${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}` : `/proxy${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
       console.log("Fetching URL:", url);
 
       const response = await fetch(url, {
@@ -118,7 +119,7 @@ export class FileService {
 
   getDownloadUrl(currentPath: string, fileName: string): string {
     const basePath = currentPath.endsWith("/") ? currentPath : `${currentPath}/`;
-    return `${this.baseUrl}${basePath}${fileName}`;
+    return this.baseUrl ? `${this.baseUrl}${basePath}${fileName}` : `/proxy${basePath}${fileName}`;
   }
 
   getFileIcon(file: FileItem): string {
