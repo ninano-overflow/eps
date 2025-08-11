@@ -6,35 +6,35 @@ export class FileService {
   private getBaseUrl(): string {
     if (typeof window === "undefined") {
       // Server-side rendering
-      return "http://192.168.199.11:8554";
+      return "http://192.168.199.11:3001";
     }
 
     const currentHost = window.location.hostname;
     const currentPort = window.location.port;
     const currentProtocol = window.location.protocol;
-    
+
     console.log("Current location:", { currentHost, currentPort, currentProtocol });
-    
+
     // If running on localhost (development)
     if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-      return currentPort === "3000" ? "http://localhost:3001" : "http://192.168.199.11:8554";
+      return currentPort === "3000" ? "http://localhost:3001" : "http://192.168.199.11:3001";
     }
-    
+
     // If running on the same network IP (edge device or production)
     if (currentHost.startsWith("192.168.199.11")) {
-      // Always connect directly to port 8554 for the backend file server
-      return `${currentProtocol}//${currentHost}:8554`;
+      // Always connect directly to port 3001 for the backend file server
+      return `${currentProtocol}//${currentHost}:3001`;
     }
-    
+
     // Fallback for other scenarios
-    return "http://192.168.199.11:8554";
+    return "http://192.168.199.11:3001";
   }
 
   async getFiles(path: string = "/download"): Promise<FileItem[]> {
     try {
       const normalizedPath = path.startsWith("/") ? path : `/${path}`;
       let url: string;
-      
+
       if (this.baseUrl) {
         url = `${this.baseUrl}${normalizedPath}${normalizedPath.endsWith("/") ? "" : "/"}`;
       } else {
@@ -166,7 +166,7 @@ export class FileService {
 
   getDownloadUrl(currentPath: string, fileName: string): string {
     const basePath = currentPath.endsWith("/") ? currentPath : `${currentPath}/`;
-    
+
     if (this.baseUrl) {
       return `${this.baseUrl}${basePath}${fileName}`;
     } else {
