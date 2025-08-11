@@ -42,9 +42,9 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
 
   const handleDownload = async (file: FileItem) => {
     const fileKey = `${currentPath}/${file.name}`;
-    
+
     try {
-      setDownloadingFiles(prev => new Set(prev).add(fileKey));
+      setDownloadingFiles((prev) => new Set(prev).add(fileKey));
       await fileService.downloadFile(currentPath, file.name);
     } catch (error) {
       console.error("Download failed:", error);
@@ -52,7 +52,7 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
       const downloadUrl = fileService.getDownloadUrl(currentPath, file.name);
       window.open(downloadUrl, "_blank");
     } finally {
-      setDownloadingFiles(prev => {
+      setDownloadingFiles((prev) => {
         const newSet = new Set(prev);
         newSet.delete(fileKey);
         return newSet;
@@ -147,29 +147,37 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
             <p className="text-lg">This folder is empty</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="space-y-2">
             {files.map((file, index) => (
-              <div key={index} className="bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md group" onClick={() => handleFileClick(file)}>
-                <div className="text-center">
-                  <div className="text-4xl mb-2 group-hover:scale-110 transition-transform">{fileService.getFileIcon(file)}</div>
+              <div key={index} className="flex items-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg p-3 cursor-pointer transition-all duration-200 hover:shadow-md group" onClick={() => handleFileClick(file)}>
+                {/* File Icon */}
+                <div className="flex-shrink-0 text-2xl mr-4 group-hover:scale-110 transition-transform">{fileService.getFileIcon(file)}</div>
+
+                {/* File Info */}
+                <div className="flex-grow min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">{file.name}</div>
-                  <div className="text-xs text-gray-500 mt-1">{file.type === "directory" ? "Folder" : fileService.formatFileSize(file.size)}</div>
-                  {file.modified && <div className="text-xs text-gray-400 mt-1">{file.modified}</div>}
+                  <div className="flex items-center space-x-3 text-xs text-gray-500 mt-1">
+                    <span>{file.type === "directory" ? "Folder" : fileService.formatFileSize(file.size)}</span>
+                    {file.modified && <span>Modified: {file.modified}</span>}
+                  </div>
                 </div>
 
-                {/* Download button for files */}
-                {file.type === "file" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(file);
-                    }}
-                    disabled={downloadingFiles.has(`${currentPath}/${file.name}`)}
-                    className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:bg-gray-400"
-                  >
-                    {downloadingFiles.has(`${currentPath}/${file.name}`) ? "Downloading..." : "Download"}
-                  </button>
-                )}
+                {/* Actions */}
+                <div className="flex-shrink-0 ml-4">
+                  {file.type === "file" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(file);
+                      }}
+                      disabled={downloadingFiles.has(`${currentPath}/${file.name}`)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs py-2 px-3 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {downloadingFiles.has(`${currentPath}/${file.name}`) ? "Downloading..." : "Download"}
+                    </button>
+                  )}
+                  {file.type === "directory" && <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to open →</div>}
+                </div>
               </div>
             ))}
           </div>
@@ -192,8 +200,8 @@ export function FileExplorer({ initialPath = "/download" }: FileExplorerProps) {
               </video>
               <div className="mt-4 flex justify-between items-center">
                 <div className="text-sm text-gray-600">Size: {fileService.formatFileSize(selectedFile.size)}</div>
-                <button 
-                  onClick={() => handleDownload(selectedFile)} 
+                <button
+                  onClick={() => handleDownload(selectedFile)}
                   disabled={downloadingFiles.has(`${currentPath}/${selectedFile.name}`)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:bg-gray-400"
                 >
