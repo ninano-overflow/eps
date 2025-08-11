@@ -1,7 +1,7 @@
 import { type FileItem } from "../types";
 
 export class FileService {
-  private baseUrl = "http://192.168.199.11:8554";
+  private baseUrl = "http://192.168.199.11:3001";
   // typeof window !== "undefined" && window.location.port === "3000"
   //   ? "http://localhost:3001" // Use simple CORS proxy in development
   //   : "http://192.168.199.11:8554";
