@@ -1,0 +1,25 @@
+{
+  "name": "eps",
+  "version": "1.0.0",
+  "description": "Edge Proxy Server - RTSP proxy for drone video streaming",
+  "main": "rtsp-proxy.js",
+  "scripts": {
+    "start": "node http-proxy.js",
+    "rtsp-only": "node http-proxy.js",
+    "dev": "node http-proxy.js",
+    "test": "node test-http.js"
+  },
+  "keywords": [
+    "rtsp",
+    "proxy",
+    "drone",
+    "streaming",
+    "video",
+    "edge"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=12.0.0"
+  }
+}

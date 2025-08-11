@@ -1,0 +1,15 @@
+{
+  "name": "eps-cors-proxy",
+  "version": "1.0.0",
+  "description": "CORS proxy for EPS file server",
+  "main": "cors-proxy.js",
+  "scripts": {
+    "start": "node cors-proxy.js"
+  },
+  "dependencies": {
+    "http-proxy": "^1.18.1"
+  },
+  "keywords": ["cors", "proxy", "eps"],
+  "author": "",
+  "license": "ISC"
+}
